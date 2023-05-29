@@ -12,8 +12,8 @@ interface ContactDao {
     fun getAll(): LiveData<List<Contact>>
 
     @Insert
-    fun insert(contact: Contact)
+    suspend fun insert(contact: Contact)
 
     @Delete
-    fun delete(contact: Contact)
+    suspend fun delete(contact: Contact)
 }
