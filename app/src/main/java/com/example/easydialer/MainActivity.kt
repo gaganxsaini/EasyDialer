@@ -44,6 +44,8 @@ class MainActivity : AppCompatActivity() {
         when (item.itemId) {
             R.id.menu_action_add ->
                 startActivity(Intent (this, AddContactActivity::class.java));
+            R.id.menu_action_view ->
+                startActivity(Intent (this, ViewContactActivity::class.java));
         }
         return true
     }

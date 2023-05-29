@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">EasyDialer</string>
+    <string name="title_activity_view_contact">ViewContactActivity</string>
 </resources>

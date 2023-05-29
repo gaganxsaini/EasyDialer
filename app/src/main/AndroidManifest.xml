@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.CALL_PHONE"/>
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
+    <uses-feature android:name="android.hardware.telephony" android:required="true"/>
 
     <application
         android:allowBackup="true"
@@ -13,6 +16,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EasyDialer"
         tools:targetApi="31">
+        <activity
+            android:name=".ViewContactActivity"
+            android:exported="false"
+            android:label="@string/title_activity_view_contact"
+            android:theme="@style/Theme.EasyDialer" />
         <activity
             android:name=".AddContactActivity"
             android:exported="false" />
