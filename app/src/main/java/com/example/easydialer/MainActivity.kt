@@ -8,10 +8,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.SmoothScroller.ScrollVectorProvider
 import com.example.easydialer.data.ContactViewModel
 import com.example.easydialer.data.ListAdapter
 
@@ -25,12 +23,12 @@ class MainActivity : AppCompatActivity() {
         val adapter = ListAdapter()
         val recyclerView = findViewById<RecyclerView>(R.id.rv_list)
         recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
 
         PagerSnapHelper().attachToRecyclerView(recyclerView)
 
         mContactViewModel = ViewModelProvider(this).get(ContactViewModel::class.java)
-        mContactViewModel.readAllData.observe(this, Observer {contact ->
+        mContactViewModel.readAllData.observe(this, { contact ->
             adapter.setData(contact)
         })
     }
@@ -43,9 +41,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item : MenuItem) : Boolean {
         when (item.itemId) {
             R.id.menu_action_add ->
-                startActivity(Intent (this, AddContactActivity::class.java));
-            R.id.menu_action_view ->
-                startActivity(Intent (this, ViewContactActivity::class.java));
+                startActivity(Intent (this, AddContactActivity::class.java))
             /*
             R.id.menu_action_speak ->
                 startActivity(Intent(this, SpeakActivity::class.java))

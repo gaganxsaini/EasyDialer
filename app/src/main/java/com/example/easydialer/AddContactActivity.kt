@@ -1,129 +1,89 @@
 package com.example.easydialer
 
-import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
-import android.provider.OpenableColumns
+import android.provider.ContactsContract
 import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.PagerSnapHelper
+import androidx.recyclerview.widget.RecyclerView
 import com.example.easydialer.data.Contact
 import com.example.easydialer.data.ContactViewModel
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
+import com.example.easydialer.data.ViewContactListAdapter
 
 class AddContactActivity : AppCompatActivity() {
     private lateinit var btnSave : Button
-    private lateinit var btnBrowse : Button
     private lateinit var mContactViewModel : ContactViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_contact)
         btnSave = findViewById(R.id.btnSave)
-        btnBrowse = findViewById(R.id.btnBrowsePic)
 
         mContactViewModel = ViewModelProvider(this).get(ContactViewModel::class.java)
 
         btnSave.setOnClickListener{
-            saveFile()
-            insertDataToDatabase()
+            //insertDataToDatabase()
+            launchContactPicker()
         }
 
-        btnBrowse.setOnClickListener{
-            var intent = Intent()
-            intent.type = "image/*"
-            intent.action = Intent.ACTION_GET_CONTENT
-            startActivityForResult(Intent.createChooser(intent, "Choose Image"), 101)
+        val adapter = ViewContactListAdapter()
+        val recyclerView = findViewById<RecyclerView>(R.id.rv_list_all)
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+        PagerSnapHelper().attachToRecyclerView(recyclerView)
+
+        mContactViewModel = ViewModelProvider(this).get(ContactViewModel::class.java)
+        mContactViewModel.readAllData.observe(this){
+            adapter.differ.submitList(it)
+        }
+
+        val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                return true
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val pos  = viewHolder.adapterPosition
+                val contact = adapter.differ.currentList[pos]
+                mContactViewModel.removeContact(contact)
+            }
+        }
+
+        ItemTouchHelper(itemTouchHelperCallback).apply {
+            attachToRecyclerView(recyclerView)
         }
     }
-
-    var fileUri : Uri? = null
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 101 && resultCode == RESULT_OK && data != null) {
-            fileUri = data.data
-
-            try {
-                val img = findViewById<ImageView>(R.id.imgTemp)
-                val imgFile = File(fileUri?.path)
-
-                val inputStream: InputStream = contentResolver.openInputStream(fileUri!!) ?: return
-                val bitmap1: Bitmap = BitmapFactory.decodeStream(inputStream)
-                img.setImageBitmap(bitmap1)
-            } finally {
-
-            }
+        if (requestCode == REQUEST_CODE_PICK_CONTACT && resultCode == RESULT_OK && data != null) {
+            val contactUri : Uri? = data.data
+            if (contactUri != null)
+                insertDataToDatabase(contactUri)
         }
     }
 
-    private var fileName : String? = null
-
-    private fun saveFile() {
-        fileName = fileUri?.let { getFileName(it) }
-        insertInPrivateStorage(fileName!!)
-    }
-
-    private fun getFileName(uri : Uri) : String? {
-        var result : String? = null
-        if (uri.scheme.equals("content")) {
-            var cursor = contentResolver.query(uri, null, null, null, null)
-            try {
-                if (cursor != null && cursor.moveToFirst()) {
-                    var col_index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (col_index >= 0)
-                        result = cursor.getString(col_index)
-                }
-            } finally {
-                cursor?.close()
-            }
-        }
-
-        if (result == null) {
-            var cut = uri.path?.lastIndexOf('/')
-            if (cut != null && cut != -1) {
-                result = uri.path?.substring(cut + 1)
-            }
-        }
-
-        return result
-    }
-
-    private fun insertInPrivateStorage(name : String) {
-        val inputStream: InputStream = contentResolver.openInputStream(fileUri!!) ?: return
-
-        val fos : FileOutputStream = openFileOutput(name, MODE_APPEND)
-
-        inputStream.use { input ->
-            fos.use { output ->
-                val buffer = ByteArray(4 * 1024) // buffer size
-                while (true) {
-                    val byteCount = input.read(buffer)
-                    if (byteCount < 0) break
-                    output.write(buffer, 0, byteCount)
-                }
-                output.flush()
-            }
-        }
-
-
-    }
-
-    private fun insertDataToDatabase(){
-        val txtName = findViewById<EditText>(R.id.editTextName)
-        val txtPhone = findViewById<EditText>(R.id.editTextPhone)
-        val name = txtName.text.toString()
-        val phone = txtPhone.text.toString()
-        val contact = Contact(0, name, phone, fileName)
+    private fun insertDataToDatabase(uri : Uri){
+        val contact = Contact(0, uri.toString())
         mContactViewModel.addContact(contact)
         Toast.makeText(this, "Successfully added", Toast.LENGTH_LONG).show()
+    }
+
+    private val REQUEST_CODE_PICK_CONTACT = 1
+
+    private fun launchContactPicker() {
+        val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+        startActivityForResult(intent, REQUEST_CODE_PICK_CONTACT)
     }
 }

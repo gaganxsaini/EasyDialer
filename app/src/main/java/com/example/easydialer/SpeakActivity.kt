@@ -1,17 +1,12 @@
 package com.example.easydialer
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
-import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.easydialer.data.ContactViewModel
-
 
 class SpeakActivity : AppCompatActivity() {
 
@@ -55,12 +50,14 @@ class SpeakActivity : AppCompatActivity() {
             if (matches != null) {
                 for (x in mContactViewModel.readAllData.value!!)
                 {
+                    /*
                     if (matches.contains(x.name)) {
                         val callIntent = Intent(Intent.ACTION_CALL)
                         callIntent.data = Uri.parse("tel:" + x.phone)
                         ContextCompat.startActivity(this, callIntent, null)
                         break
                     }
+                   */
                 }
             }
         }

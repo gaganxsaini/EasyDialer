@@ -1,16 +1,15 @@
 package com.example.easydialer.data
 
+import android.net.Uri
+import android.provider.ContactsContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.example.easydialer.R
-import java.io.File
 
 
 class ViewContactListAdapter : RecyclerView.Adapter<ViewContactListAdapter.MyViewHolder>() {
@@ -39,19 +38,22 @@ class ViewContactListAdapter : RecyclerView.Adapter<ViewContactListAdapter.MyVie
 
                 with(holder) {
                         with (differ.currentList[position]) {
-                                val img = holder.itemView.findViewById<ImageView>(R.id.imgPhoto2)
                                 val txtName = holder.itemView.findViewById<TextView>(R.id.txtName2)
-                                val txtPhone = holder.itemView.findViewById<TextView>(R.id.txtPhone2)
+                                val contactUri = Uri.parse(uri)
 
-                                val context = holder.itemView.context
-                                val dir = context.filesDir.absolutePath
-                                val imgFile = File(dir + "//" + imagePath)
-                                if (imgFile.exists()) {
-                                        Glide.with(holder.itemView.context).load(imgFile).into(img)
+                                val cursor = holder.itemView.context.contentResolver.query(contactUri, arrayOf(
+                                        ContactsContract.Contacts.DISPLAY_NAME), null, null, null)
+
+                                try {
+                                        if (cursor == null || cursor.count == 0) return
+
+                                        cursor.moveToFirst()
+                                        val name = cursor.getString(0)
+                                        txtName.text = name
                                 }
-
-                                txtName.text = name
-                                txtPhone.text = phone
+                                finally {
+                                        cursor?.close()
+                                }
                         }
                 }
 

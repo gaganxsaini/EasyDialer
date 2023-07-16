@@ -7,7 +7,5 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "contact_table")
 data class Contact(
     @PrimaryKey(autoGenerate = true) val id: Int,
-    @ColumnInfo(name = "name") val name: String?,
-    @ColumnInfo(name = "phone") val phone: String?,
-    @ColumnInfo(name = "imagePath") val imagePath: String?
+    @ColumnInfo(name = "uri") val uri: String?,
 )
