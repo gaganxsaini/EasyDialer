@@ -46,6 +46,10 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent (this, AddContactActivity::class.java));
             R.id.menu_action_view ->
                 startActivity(Intent (this, ViewContactActivity::class.java));
+            /*
+            R.id.menu_action_speak ->
+                startActivity(Intent(this, SpeakActivity::class.java))
+            */
         }
         return true
     }

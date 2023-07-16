@@ -5,19 +5,24 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
 
-    <uses-feature android:name="android.hardware.telephony" android:required="true"/>
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="true" />
 
     <application
         android:allowBackup="true"
-        android:hardwareAccelerated="false"
-        android:largeHeap="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
+        android:hardwareAccelerated="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:largeHeap="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.EasyDialer"
         tools:targetApi="31">
+        <activity
+            android:name=".SpeakActivity"
+            android:exported="false" />
         <activity
             android:name=".ViewContactActivity"
             android:exported="false"

@@ -2,4 +2,5 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/menu_action_add" android:title="Add" />
     <item android:id="@+id/menu_action_view" android:title="View" />
+    <!--<item android:id="@+id/menu_action_speak" android:title="Speak" />-->
 </menu>
