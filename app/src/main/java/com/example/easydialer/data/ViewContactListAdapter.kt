@@ -1,6 +1,5 @@
 package com.example.easydialer.data
 
-import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.easydialer.R
 import java.io.File
 
@@ -47,8 +47,7 @@ class ViewContactListAdapter : RecyclerView.Adapter<ViewContactListAdapter.MyVie
                                 val dir = context.filesDir.absolutePath
                                 val imgFile = File(dir + "//" + imagePath)
                                 if (imgFile.exists()) {
-                                        val myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath())
-                                        img.setImageBitmap(myBitmap)
+                                        Glide.with(holder.itemView.context).load(imgFile).into(img)
                                 }
 
                                 txtName.text = name

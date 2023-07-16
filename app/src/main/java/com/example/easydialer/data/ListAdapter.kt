@@ -1,15 +1,14 @@
 package com.example.easydialer.data
 
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.TextView
 import androidx.core.content.ContextCompat.startActivity
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.easydialer.R
 import java.io.File
 
@@ -37,8 +36,7 @@ class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
         val dir = context.filesDir.absolutePath
         val imgFile = File(dir + "//" + currItem.imagePath)
         if (imgFile.exists()) {
-            val myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath())
-            img.setImageBitmap(myBitmap)
+            Glide.with(holder.itemView.context).load(imgFile).into(img)
         }
 
         img.setOnClickListener{
