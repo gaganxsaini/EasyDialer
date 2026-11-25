@@ -1,6 +1,6 @@
 package com.example.easydialer.data
 
-import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.Contacts
@@ -8,13 +8,20 @@ import android.telephony.PhoneNumberUtils
 import androidx.lifecycle.LiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 
 enum class AddResult { ADDED, DUPLICATE, FAILED }
 
 class ContactRepository(
     private val contactDao: ContactDao,
-    private val resolver: ContentResolver,
+    context: Context,
 ) {
+    private val resolver = context.contentResolver
+
+    /** Custom photos live here, in the app's private storage, so they survive gallery clean-ups. */
+    private val photoDir = File(context.filesDir, "photos")
+
     val readAllData: LiveData<List<Contact>> = contactDao.getAll()
 
     /** Saves the phone number the picker returned, unless that number is already on the dial screen. */
@@ -30,6 +37,45 @@ class ContactRepository(
 
     suspend fun restoreContact(contact: Contact) = contactDao.insert(contact)
 
+    /** Copies the image at [source] into the app's storage and uses it as the contact's photo. */
+    suspend fun setCustomPhoto(contactId: Int, source: Uri): Boolean = withContext(Dispatchers.IO) {
+        val contact = contactDao.getById(contactId) ?: return@withContext false
+        photoDir.mkdirs()
+        // A new name each time, so Glide doesn't show a cached copy of the previous photo.
+        val file = File(photoDir, "${contactId}_${System.currentTimeMillis()}.jpg")
+        val copied = try {
+            resolver.openInputStream(source)?.use { input ->
+                file.outputStream().use { input.copyTo(it) }
+            } != null
+        } catch (e: IOException) {
+            false
+        } catch (e: SecurityException) {
+            false
+        }
+        if (!copied || file.length() == 0L) {
+            file.delete()
+            return@withContext false
+        }
+        contactDao.updateCustomPhoto(contactId, file.absolutePath)
+        contact.customPhoto?.let { File(it).delete() }
+        true
+    }
+
+    suspend fun removeCustomPhoto(contactId: Int) = withContext(Dispatchers.IO) {
+        val contact = contactDao.getById(contactId) ?: return@withContext
+        contactDao.updateCustomPhoto(contactId, null)
+        contact.customPhoto?.let { File(it).delete() }
+    }
+
+    /**
+     * Deletes photos of contacts that were removed. Not done at removal time, because Undo
+     * brings the contact back with the same photo.
+     */
+    suspend fun deleteUnusedPhotos() = withContext(Dispatchers.IO) {
+        val inUse = contactDao.getAllOnce().mapNotNull { it.customPhoto }.toSet()
+        photoDir.listFiles()?.filter { it.absolutePath !in inUse }?.forEach { it.delete() }
+    }
+
     /** Reads each contact's current name and photo. Runs off the main thread. */
     suspend fun resolve(contacts: List<Contact>): List<ContactCard> = withContext(Dispatchers.IO) {
         contacts.map { resolveOne(it) }
@@ -41,16 +87,20 @@ class ContactRepository(
         // Rows saved before version 2 only have the picker URI: fill in lookup key, number and name once.
         val legacyUri = contact.uri
         if (contact.lookupKey == null && legacyUri != null) {
-            val fresh = readPhoneRow(Uri.parse(legacyUri))?.copy(id = contact.id)
+            val fresh = readPhoneRow(Uri.parse(legacyUri))
+                ?.copy(id = contact.id, customPhoto = contact.customPhoto)
             // Every write makes Room re-emit the list, so only write when something changed.
             if (fresh != null && fresh != contact) {
-                contactDao.update(fresh)
+                contactDao.updateDetails(fresh.id, fresh.lookupKey, fresh.number, fresh.name)
                 contact = fresh
             }
         }
 
+        // A custom photo wins; skip it if its file has gone missing.
+        val customPhoto = contact.customPhoto?.takeIf { File(it).exists() }
+
         val live = contact.lookupKey?.let { readContact(it) }
-            ?: return ContactCard(contact, contact.name, contact.number, null)
+            ?: return ContactCard(contact, contact.name, contact.number, customPhoto)
 
         // Keep the saved number in step with the Contacts app: if it was edited and the
         // contact now has exactly one number, use that one.
@@ -62,9 +112,11 @@ class ContactRepository(
         }
 
         val updated = contact.copy(lookupKey = live.lookupKey ?: contact.lookupKey, number = number, name = live.name ?: contact.name)
-        if (updated != contact) contactDao.update(updated)
+        if (updated != contact) {
+            contactDao.updateDetails(updated.id, updated.lookupKey, updated.number, updated.name)
+        }
 
-        return ContactCard(updated, live.name ?: updated.name, number, live.photoUri)
+        return ContactCard(updated, live.name ?: updated.name, number, customPhoto ?: live.photoUri)
     }
 
     /** Reads the phone-number row returned by the contact picker. */

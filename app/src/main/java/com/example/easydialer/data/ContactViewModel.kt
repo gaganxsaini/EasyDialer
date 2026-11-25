@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 class ContactViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = ContactRepository(
         ContactDatabase.getDatabase(application).contactDao(),
-        application.contentResolver
+        application
     )
 
     val readAllData: LiveData<List<Contact>> = repository.readAllData
@@ -41,6 +41,17 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
     }
 
     suspend fun addFromPicker(uri: Uri): AddResult = repository.addFromPicker(uri)
+
+    suspend fun setCustomPhoto(contactId: Int, source: Uri): Boolean =
+        repository.setCustomPhoto(contactId, source)
+
+    fun removeCustomPhoto(contactId: Int) = viewModelScope.launch {
+        repository.removeCustomPhoto(contactId)
+    }
+
+    fun deleteUnusedPhotos() = viewModelScope.launch {
+        repository.deleteUnusedPhotos()
+    }
 
     fun removeContact(contact: Contact) = viewModelScope.launch {
         repository.removeContact(contact)

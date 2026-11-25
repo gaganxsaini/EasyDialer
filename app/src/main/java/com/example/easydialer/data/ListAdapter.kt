@@ -60,23 +60,12 @@ class ListAdapter(
     private fun showPlaceholder(img: ImageView, card: ContactCard) {
         Glide.with(img).clear(img)
         img.scaleType = ImageView.ScaleType.CENTER_INSIDE
-        img.setBackgroundColor(PLACEHOLDER_COLORS[card.contact.id.mod(PLACEHOLDER_COLORS.size)])
+        img.setBackgroundColor(ContactColors.forContact(card.contact))
         img.setImageResource(R.drawable.ic_person)
     }
 
     fun setData(cards: List<ContactCard>) {
         this.cards = cards
         notifyDataSetChanged()
-    }
-
-    private companion object {
-        val PLACEHOLDER_COLORS = intArrayOf(
-            0xFF1E88E5.toInt(), // blue
-            0xFF43A047.toInt(), // green
-            0xFFE53935.toInt(), // red
-            0xFFFB8C00.toInt(), // orange
-            0xFF8E24AA.toInt(), // purple
-            0xFF00897B.toInt(), // teal
-        )
     }
 }

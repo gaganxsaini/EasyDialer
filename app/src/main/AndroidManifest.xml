@@ -27,6 +27,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EasyDialer"
         tools:targetApi="31">
+        <!-- Gives the camera app a place to save a photo taken from setup. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <activity
             android:name=".SpeakActivity"
             android:exported="false" />

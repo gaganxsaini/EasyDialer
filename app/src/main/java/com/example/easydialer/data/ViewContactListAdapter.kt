@@ -3,16 +3,21 @@ package com.example.easydialer.data
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.easydialer.R
 
 /** The list on the setup screen. Names are already resolved, so binding does no contact lookups. */
-class ViewContactListAdapter : RecyclerView.Adapter<ViewContactListAdapter.MyViewHolder>() {
+class ViewContactListAdapter(
+    private val onClick: (ContactCard) -> Unit,
+) : RecyclerView.Adapter<ViewContactListAdapter.MyViewHolder>() {
     class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val txtName: TextView = itemView.findViewById(R.id.txtName2)
+        val imgThumb: ImageView = itemView.findViewById(R.id.imgThumb)
     }
 
     private val differCallback = object : DiffUtil.ItemCallback<ContactCard>() {
@@ -34,5 +39,16 @@ class ViewContactListAdapter : RecyclerView.Adapter<ViewContactListAdapter.MyVie
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         val card = differ.currentList[position]
         holder.txtName.text = card.name ?: card.number ?: holder.itemView.context.getString(R.string.unknown_contact)
+        holder.itemView.setOnClickListener { onClick(card) }
+
+        val thumb = holder.imgThumb
+        if (card.photoUri != null) {
+            thumb.setBackgroundColor(0)
+            Glide.with(thumb).load(card.photoUri).centerCrop().error(R.drawable.ic_person).into(thumb)
+        } else {
+            Glide.with(thumb).clear(thumb)
+            thumb.setBackgroundColor(ContactColors.forContact(card.contact))
+            thumb.setImageResource(R.drawable.ic_person)
+        }
     }
 }

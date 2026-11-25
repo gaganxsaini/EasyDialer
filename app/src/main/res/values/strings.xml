@@ -23,4 +23,11 @@
     <string name="pin_too_short">Use 4 digits</string>
     <string name="pin_mismatch">PINs don\'t match</string>
     <string name="pin_changed">PIN changed</string>
+    <string name="photo_gallery">Choose from gallery</string>
+    <string name="photo_camera">Take a photo</string>
+    <string name="photo_remove">Remove custom photo</string>
+    <string name="photo_saved">Photo updated</string>
+    <string name="photo_failed">Couldn\'t use that photo</string>
+    <string name="no_camera">No camera app found</string>
+    <string name="setup_hint">Tap a person to change their photo. Swipe to remove.</string>
 </resources>

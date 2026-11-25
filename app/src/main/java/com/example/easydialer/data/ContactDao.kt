@@ -5,7 +5,6 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
-import androidx.room.Update
 
 @Dao
 interface ContactDao {
@@ -18,8 +17,16 @@ interface ContactDao {
     @Insert
     suspend fun insert(contact: Contact)
 
-    @Update
-    suspend fun update(contact: Contact)
+    @Query("SELECT * FROM contact_table WHERE id = :id")
+    suspend fun getById(id: Int): Contact?
+
+    // Targeted updates, so a background refresh of names/numbers can't overwrite a photo set
+    // meanwhile (and the other way round).
+    @Query("UPDATE contact_table SET lookup_key = :lookupKey, number = :number, name = :name WHERE id = :id")
+    suspend fun updateDetails(id: Int, lookupKey: String?, number: String?, name: String?)
+
+    @Query("UPDATE contact_table SET custom_photo = :path WHERE id = :id")
+    suspend fun updateCustomPhoto(id: Int, path: String?)
 
     @Delete
     suspend fun delete(contact: Contact)

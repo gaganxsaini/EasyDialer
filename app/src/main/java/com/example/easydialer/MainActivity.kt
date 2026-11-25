@@ -59,6 +59,9 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, blockBackAsHome)
 
+        // Clean up photos of contacts removed last time (kept until now so Undo could restore them).
+        if (savedInstanceState == null) mContactViewModel.deleteUnusedPhotos()
+
         askForMissingPermissions()
     }
 

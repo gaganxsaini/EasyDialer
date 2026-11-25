@@ -18,9 +18,11 @@ data class Contact(
     @ColumnInfo(name = "lookup_key") val lookupKey: String? = null,
     @ColumnInfo(name = "number") val number: String? = null,
     @ColumnInfo(name = "name") val name: String? = null,
+    /** Absolute path of a photo chosen in setup, kept in the app's own storage. Shown instead of the contact photo. */
+    @ColumnInfo(name = "custom_photo") val customPhoto: String? = null,
 )
 
-/** A saved contact with its current name and photo, read from the system contacts. */
+/** A saved contact with its current name and photo (custom photo first, else the contact's own). */
 data class ContactCard(
     val contact: Contact,
     val name: String?,

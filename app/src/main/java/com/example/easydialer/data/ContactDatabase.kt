@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Contact::class], version = 2)
+@Database(entities = [Contact::class], version = 3)
 abstract class ContactDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
 
@@ -24,6 +24,13 @@ abstract class ContactDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds the custom photo column. */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE contact_table ADD COLUMN custom_photo TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): ContactDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -31,7 +38,7 @@ abstract class ContactDatabase : RoomDatabase() {
                     ContactDatabase::class.java,
                     "contact_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                     .also { INSTANCE = it }
             }

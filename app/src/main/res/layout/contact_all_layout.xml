@@ -1,17 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- One row on the setup screen: photo thumbnail and name. Tap to change the photo, swipe to remove. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    >
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <ImageView
+        android:id="@+id/imgThumb"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
 
     <TextView
         android:id="@+id/txtName2"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:text="Name"/>
+        android:layout_weight="1"
+        android:textSize="20sp" />
 
 </LinearLayout>
