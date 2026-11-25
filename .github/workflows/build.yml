@@ -32,7 +32,21 @@ jobs:
           name: EasyDialer-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
+      # A one-commit branch holding just the latest APK: fetchable with plain git when the
+      # releases API is having trouble.
+      - name: Put the APK on the apk branch
+        run: |
+          mkdir apk-branch && cd apk-branch
+          cp ../app/build/outputs/apk/debug/app-debug.apk EasyDialer.apk
+          git init -q -b apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add EasyDialer.apk
+          git commit -q -m "EasyDialer build ${{ github.run_number }} from ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" apk
+
       - name: Publish release with the APK
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

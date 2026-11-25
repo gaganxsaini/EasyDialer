@@ -17,7 +17,6 @@ import androidx.core.widget.doAfterTextChanged
  * only shows a number pad. It is a child lock, not security, so it is kept in plain prefs.
  */
 object SetupLock {
-    private const val PREFS = "settings"
     private const val KEY_PIN = "setup_pin"
     private const val PIN_LENGTH = 4
 
@@ -104,5 +103,5 @@ object SetupLock {
         focus.requestFocus()
     }
 
-    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun prefs(context: Context) = context.getSharedPreferences(AppSettings.PREFS, Context.MODE_PRIVATE)
 }

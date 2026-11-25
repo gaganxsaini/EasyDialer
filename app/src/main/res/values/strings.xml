@@ -30,4 +30,9 @@
     <string name="photo_failed">Couldn\'t use that photo</string>
     <string name="no_camera">No camera app found</string>
     <string name="setup_hint">Tap a person to change their photo. Swipe to remove.</string>
+    <string name="menu_per_screen">Contacts per screen</string>
+    <plurals name="per_screen_option">
+        <item quantity="one">%d (one big photo)</item>
+        <item quantity="other">%d per screen</item>
+    </plurals>
 </resources>

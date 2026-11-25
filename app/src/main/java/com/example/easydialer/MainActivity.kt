@@ -24,6 +24,7 @@ import com.example.easydialer.data.ListAdapter
 class MainActivity : AppCompatActivity() {
     private lateinit var mContactViewModel: ContactViewModel
     private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: ListAdapter
 
     // As the home screen, Back has nowhere to go: swallow it instead of closing the app.
     private val blockBackAsHome = object : OnBackPressedCallback(false) {
@@ -40,7 +41,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val adapter = ListAdapter(onCall = ::call, onLongPress = ::openSetup)
+        adapter = ListAdapter(onCall = ::call, onLongPress = ::openSetup)
+        adapter.setPerScreen(AppSettings.contactsPerScreen(this))
         recyclerView = findViewById(R.id.rv_list)
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
@@ -74,6 +76,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         blockBackAsHome.isEnabled = HomeScreen.isDefault(this)
+        // The grid size may have been changed in setup.
+        if (adapter.setPerScreen(AppSettings.contactsPerScreen(this))) recyclerView.scrollToPosition(0)
         // Picks up photos or numbers changed in the Contacts app while we were away.
         mContactViewModel.refresh()
     }

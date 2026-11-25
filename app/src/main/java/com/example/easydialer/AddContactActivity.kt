@@ -165,6 +165,10 @@ class AddContactActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        R.id.menu_per_screen -> {
+            choosePerScreen()
+            true
+        }
         R.id.menu_regular_home -> {
             HomeScreen.openRegular(this)
             true
@@ -178,6 +182,21 @@ class AddContactActivity : AppCompatActivity() {
             true
         }
         else -> super.onOptionsItemSelected(item)
+    }
+
+    private fun choosePerScreen() {
+        val choices = AppSettings.PER_SCREEN_CHOICES
+        val labels = choices.map { resources.getQuantityString(R.plurals.per_screen_option, it, it) }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_per_screen)
+            .setSingleChoiceItems(
+                labels.toTypedArray(),
+                choices.indexOf(AppSettings.contactsPerScreen(this))
+            ) { dialog, which ->
+                AppSettings.setContactsPerScreen(this, choices[which])
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun addPicked(uri: Uri) {
