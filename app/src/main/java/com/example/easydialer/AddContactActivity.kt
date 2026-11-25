@@ -6,84 +6,86 @@ import android.os.Bundle
 import android.provider.ContactsContract
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.example.easydialer.data.Contact
+import com.example.easydialer.data.AddResult
 import com.example.easydialer.data.ContactViewModel
 import com.example.easydialer.data.ViewContactListAdapter
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.launch
 
 class AddContactActivity : AppCompatActivity() {
-    private lateinit var btnSave : Button
-    private lateinit var mContactViewModel : ContactViewModel
+    private lateinit var mContactViewModel: ContactViewModel
+
+    private val pickContact =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val uri = result.data?.data
+            if (result.resultCode == RESULT_OK && uri != null) addPicked(uri)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_contact)
-        btnSave = findViewById(R.id.btnSave)
 
-        mContactViewModel = ViewModelProvider(this).get(ContactViewModel::class.java)
+        mContactViewModel = ViewModelProvider(this)[ContactViewModel::class.java]
 
-        btnSave.setOnClickListener{
-            //insertDataToDatabase()
-            launchContactPicker()
+        findViewById<Button>(R.id.btnSave).setOnClickListener {
+            pickContact.launch(Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI))
         }
 
         val adapter = ViewContactListAdapter()
         val recyclerView = findViewById<RecyclerView>(R.id.rv_list_all)
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
-        PagerSnapHelper().attachToRecyclerView(recyclerView)
 
-        mContactViewModel = ViewModelProvider(this).get(ContactViewModel::class.java)
-        mContactViewModel.readAllData.observe(this){
+        mContactViewModel.cards.observe(this) {
             adapter.differ.submitList(it)
         }
 
+        // Swipe left or right to remove, with Undo. Reordering isn't supported yet, so no drag.
         val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+            0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
-            ): Boolean {
-                return true
-            }
+            ): Boolean = false
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val pos  = viewHolder.adapterPosition
-                val contact = adapter.differ.currentList[pos]
-                mContactViewModel.removeContact(contact)
+                val pos = viewHolder.adapterPosition
+                val card = adapter.differ.currentList.getOrNull(pos)
+                if (pos == RecyclerView.NO_POSITION || card == null) {
+                    adapter.notifyDataSetChanged()
+                    return
+                }
+                mContactViewModel.removeContact(card.contact)
+                Snackbar.make(
+                    recyclerView,
+                    getString(R.string.contact_removed, card.name ?: card.number ?: ""),
+                    Snackbar.LENGTH_LONG
+                ).setAction(R.string.undo) {
+                    mContactViewModel.restoreContact(card.contact)
+                }.show()
             }
         }
 
-        ItemTouchHelper(itemTouchHelperCallback).apply {
-            attachToRecyclerView(recyclerView)
+        ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(recyclerView)
+    }
+
+    private fun addPicked(uri: Uri) {
+        lifecycleScope.launch {
+            val message = when (mContactViewModel.addFromPicker(uri)) {
+                AddResult.ADDED -> R.string.contact_added
+                AddResult.DUPLICATE -> R.string.contact_already_added
+                AddResult.FAILED -> R.string.contact_add_failed
+            }
+            Toast.makeText(this@AddContactActivity, message, Toast.LENGTH_LONG).show()
         }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CODE_PICK_CONTACT && resultCode == RESULT_OK && data != null) {
-            val contactUri : Uri? = data.data
-            if (contactUri != null)
-                insertDataToDatabase(contactUri)
-        }
-    }
-
-    private fun insertDataToDatabase(uri : Uri){
-        val contact = Contact(0, uri.toString())
-        mContactViewModel.addContact(contact)
-        Toast.makeText(this, "Successfully added", Toast.LENGTH_LONG).show()
-    }
-
-    private val REQUEST_CODE_PICK_CONTACT = 1
-
-    private fun launchContactPicker() {
-        val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
-        startActivityForResult(intent, REQUEST_CODE_PICK_CONTACT)
     }
 }

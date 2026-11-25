@@ -1,7 +1,5 @@
 package com.example.easydialer.data
 
-import android.net.Uri
-import android.provider.ContactsContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,51 +9,30 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.example.easydialer.R
 
-
+/** The list on the setup screen. Names are already resolved, so binding does no contact lookups. */
 class ViewContactListAdapter : RecyclerView.Adapter<ViewContactListAdapter.MyViewHolder>() {
-        inner class MyViewHolder(itemView : View) : RecyclerView.ViewHolder(itemView){
-        }
+    class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val txtName: TextView = itemView.findViewById(R.id.txtName2)
+    }
 
-        private val differCallback = object : DiffUtil.ItemCallback<Contact>(){
-                override fun areItemsTheSame(oldItem: Contact, newItem: Contact): Boolean {
-                        return oldItem.id == newItem.id
-                }
+    private val differCallback = object : DiffUtil.ItemCallback<ContactCard>() {
+        override fun areItemsTheSame(oldItem: ContactCard, newItem: ContactCard): Boolean =
+            oldItem.contact.id == newItem.contact.id
 
-                override fun areContentsTheSame(oldItem: Contact, newItem: Contact): Boolean {
-                        return oldItem == newItem
-                }
-        }
+        override fun areContentsTheSame(oldItem: ContactCard, newItem: ContactCard): Boolean =
+            oldItem == newItem
+    }
 
-        val differ = AsyncListDiffer(this, differCallback)
+    val differ = AsyncListDiffer(this, differCallback)
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
-                return MyViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.contact_all_layout, parent, false))
-        }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
+        return MyViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.contact_all_layout, parent, false))
+    }
 
-        override fun getItemCount(): Int = differ.currentList.size
+    override fun getItemCount(): Int = differ.currentList.size
 
-        override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-
-                with(holder) {
-                        with (differ.currentList[position]) {
-                                val txtName = holder.itemView.findViewById<TextView>(R.id.txtName2)
-                                val contactUri = Uri.parse(uri)
-
-                                val cursor = holder.itemView.context.contentResolver.query(contactUri, arrayOf(
-                                        ContactsContract.Contacts.DISPLAY_NAME), null, null, null)
-
-                                try {
-                                        if (cursor == null || cursor.count == 0) return
-
-                                        cursor.moveToFirst()
-                                        val name = cursor.getString(0)
-                                        txtName.text = name
-                                }
-                                finally {
-                                        cursor?.close()
-                                }
-                        }
-                }
-
-        }
+    override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
+        val card = differ.currentList[position]
+        holder.txtName.text = card.name ?: card.number ?: holder.itemView.context.getString(R.string.unknown_contact)
+    }
 }

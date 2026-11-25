@@ -1,63 +1,82 @@
 package com.example.easydialer.data
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.ContactsContract
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.core.content.ContextCompat.startActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
 import com.example.easydialer.R
 
-class ListAdapter : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
-    private var contactList = emptyList<Contact>()
+/**
+ * Full-screen photo pages. Every bind sets the image, background and tap action from scratch,
+ * because RecyclerView reuses pages: anything left over would show one person's face while
+ * calling someone else.
+ */
+class ListAdapter(
+    private val onCall: (ContactCard) -> Unit,
+    private val onLongPress: () -> Unit,
+) : RecyclerView.Adapter<ListAdapter.MyViewHolder>() {
+    private var cards = emptyList<ContactCard>()
 
-    class MyViewHolder(itemView : View) : RecyclerView.ViewHolder(itemView) {
-
+    class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val img: ImageView = itemView.findViewById(R.id.imgPhoto)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         return MyViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.contact_layout, parent, false))
     }
 
-    override fun getItemCount(): Int {
-        return contactList.size
-    }
+    override fun getItemCount(): Int = cards.size
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        val currItem = contactList[position]
-        val contactUri = Uri.parse(currItem.uri)
+        val card = cards[position]
+        val img = holder.img
 
-        val cursor = holder.itemView.context.contentResolver.query(contactUri, arrayOf(ContactsContract.Contacts.PHOTO_URI, ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, null)
-        val img = holder.itemView.findViewById<ImageView>(R.id.imgPhoto)
-        val context = holder.itemView.context
-
-        try {
-            if (cursor == null || cursor.count == 0) return
-
-            cursor.moveToFirst()
-            val photoUri = cursor.getString(0)
-            if (photoUri != null)
-                Glide.with(holder.itemView.context).load(photoUri).into(img)
-
-            val contactNumber = cursor.getString(1)
-
-            img.setOnClickListener{
-                val callIntent = Intent(Intent.ACTION_CALL)
-                callIntent.data = Uri.parse("tel:$contactNumber")
-                startActivity(context, callIntent, null)
-            }
+        img.contentDescription = card.name
+        img.setOnClickListener { onCall(card) }
+        img.setOnLongClickListener {
+            onLongPress()
+            true
         }
-        finally {
-            cursor?.close()
+
+        if (card.photoUri != null) {
+            img.scaleType = ImageView.ScaleType.CENTER_CROP
+            img.setBackgroundColor(Color.BLACK)
+            // Glide shrinks the photo to the screen size; RGB_565 halves the memory again.
+            Glide.with(img)
+                .load(card.photoUri)
+                .format(DecodeFormat.PREFER_RGB_565)
+                .error(R.drawable.ic_person)
+                .into(img)
+        } else {
+            showPlaceholder(img, card)
         }
     }
 
-    fun setData(contacts : List<Contact>) {
-        this.contactList = contacts
+    /** No photo: a person icon on a colour that stays the same for each contact, so pages can be told apart. */
+    private fun showPlaceholder(img: ImageView, card: ContactCard) {
+        Glide.with(img).clear(img)
+        img.scaleType = ImageView.ScaleType.CENTER_INSIDE
+        img.setBackgroundColor(PLACEHOLDER_COLORS[card.contact.id.mod(PLACEHOLDER_COLORS.size)])
+        img.setImageResource(R.drawable.ic_person)
+    }
+
+    fun setData(cards: List<ContactCard>) {
+        this.cards = cards
         notifyDataSetChanged()
+    }
+
+    private companion object {
+        val PLACEHOLDER_COLORS = intArrayOf(
+            0xFF1E88E5.toInt(), // blue
+            0xFF43A047.toInt(), // green
+            0xFFE53935.toInt(), // red
+            0xFFFB8C00.toInt(), // orange
+            0xFF8E24AA.toInt(), // purple
+            0xFF00897B.toInt(), // teal
+        )
     }
 }

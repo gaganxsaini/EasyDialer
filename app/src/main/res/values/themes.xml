@@ -13,4 +13,10 @@
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <!-- Dial screen: no action bar, so the photo fills the screen and there is no menu to tap by mistake. -->
+    <style name="Theme.EasyDialer.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
 </resources>
