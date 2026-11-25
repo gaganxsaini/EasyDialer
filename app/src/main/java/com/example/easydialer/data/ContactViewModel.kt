@@ -36,7 +36,9 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
     private fun resolveCards(contacts: List<Contact>) {
         resolveJob?.cancel()
         resolveJob = viewModelScope.launch {
-            _cards.value = repository.resolve(contacts)
+            val cards = repository.resolve(contacts)
+            // Most refreshes (each return to the home screen) find nothing new; don't redraw then.
+            if (cards != _cards.value) _cards.value = cards
         }
     }
 

@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         adapter.setPerScreen(AppSettings.contactsPerScreen(this))
         recyclerView = findViewById(R.id.rv_list)
         recyclerView.adapter = adapter
+        recyclerView.setHasFixedSize(true)
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         PagerSnapHelper().attachToRecyclerView(recyclerView)
 

@@ -1,11 +1,15 @@
 package com.example.easydialer.data
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.provider.CallLog
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.Contacts
 import android.telephony.PhoneNumberUtils
+import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.LiveData
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
@@ -46,19 +50,23 @@ class ContactRepository(
         ids.forEachIndexed { index, id -> contactDao.updatePosition(id, index) }
     }
 
-    /** Copies the image at [source] into the app's storage and uses it as the contact's photo. */
+    /**
+     * Saves a smaller copy of the image at [source] in the app's storage and uses it as the
+     * contact's photo. A camera photo is ~4000 px wide; decoding that on her phone takes about a
+     * second, while the screen is only 540 px wide.
+     */
     suspend fun setCustomPhoto(contactId: Int, source: Uri): Boolean = withContext(Dispatchers.IO) {
         val contact = contactDao.getById(contactId) ?: return@withContext false
         photoDir.mkdirs()
         // A new name each time, so Glide doesn't show a cached copy of the previous photo.
         val file = File(photoDir, "${contactId}_${System.currentTimeMillis()}.jpg")
         val copied = try {
-            resolver.openInputStream(source)?.use { input ->
-                file.outputStream().use { input.copyTo(it) }
-            } != null
+            saveScaledPhoto(source, file)
         } catch (e: IOException) {
             false
         } catch (e: SecurityException) {
+            false
+        } catch (e: OutOfMemoryError) {
             false
         }
         if (!copied || file.length() == 0L) {
@@ -68,6 +76,34 @@ class ContactRepository(
         contactDao.updateCustomPhoto(contactId, file.absolutePath)
         contact.customPhoto?.let { File(it).delete() }
         true
+    }
+
+    /** Writes [source] to [target] as a JPEG at most about [MAX_PHOTO_SIZE] px on its long side, upright. */
+    private fun saveScaledPhoto(source: Uri, target: File): Boolean {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        // Bounds-only decoding returns null by design, so check the stream, not the result.
+        val boundsStream = resolver.openInputStream(source) ?: return false
+        boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return false
+
+        // Halve the size while the result stays at least MAX_PHOTO_SIZE (decoding by powers of 2 is cheap).
+        var sampleSize = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= MAX_PHOTO_SIZE) sampleSize *= 2
+        val decoded = resolver.openInputStream(source)?.use {
+            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sampleSize })
+        } ?: return false
+
+        // Camera photos are often stored sideways with a rotation tag; bake the rotation in.
+        val rotation = resolver.openInputStream(source)?.use { ExifInterface(it).rotationDegrees } ?: 0
+        val upright = if (rotation == 0) decoded else Bitmap.createBitmap(
+            decoded, 0, 0, decoded.width, decoded.height,
+            Matrix().apply { postRotate(rotation.toFloat()) }, true
+        )
+
+        target.outputStream().use { upright.compress(Bitmap.CompressFormat.JPEG, 85, it) }
+        if (upright !== decoded) upright.recycle()
+        decoded.recycle()
+        return target.length() > 0
     }
 
     suspend fun removeCustomPhoto(contactId: Int) = withContext(Dispatchers.IO) {
@@ -222,5 +258,8 @@ class ContactRepository(
     private companion object {
         /** A missed call stops being marked after this long, even if she never called back. */
         const val MISSED_CALL_WINDOW_MS = 2L * 24 * 60 * 60 * 1000
+
+        /** Custom photos are stored at least this big on the long side (and under twice this). */
+        const val MAX_PHOTO_SIZE = 1280
     }
 }

@@ -36,6 +36,7 @@ class ListAdapter(
 
     /** [cards] in display order; people with a missed call should already be first. */
     fun setData(cards: List<ContactCard>) {
+        if (cards == this.cards) return
         this.cards = cards
         rebuildPages()
     }
