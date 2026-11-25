@@ -55,7 +55,12 @@ class MainActivity : AppCompatActivity() {
 
         mContactViewModel = ViewModelProvider(this)[ContactViewModel::class.java]
         mContactViewModel.cards.observe(this) { cards ->
-            adapter.setData(cards)
+            // People with a missed call come first (latest first) until she calls them back.
+            // sortedByDescending is stable, so everyone else keeps their usual order.
+            val ordered = cards.sortedByDescending { it.missedCallAt ?: 0L }
+            adapter.setData(ordered)
+            // A missed call is on the first screen, so make sure that's the screen she sees.
+            if (ordered.firstOrNull()?.missedCallAt != null) recyclerView.scrollToPosition(0)
             btnSetup.isVisible = cards.isEmpty()
         }
 
@@ -78,7 +83,7 @@ class MainActivity : AppCompatActivity() {
         blockBackAsHome.isEnabled = HomeScreen.isDefault(this)
         // The grid size may have been changed in setup.
         if (adapter.setPerScreen(AppSettings.contactsPerScreen(this))) recyclerView.scrollToPosition(0)
-        // Picks up photos or numbers changed in the Contacts app while we were away.
+        // Picks up missed calls, and photos or numbers changed in the Contacts app, while we were away.
         mContactViewModel.refresh()
     }
 
@@ -120,6 +125,7 @@ class MainActivity : AppCompatActivity() {
         val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.READ_CONTACTS,
             Manifest.permission.CALL_PHONE,
+            Manifest.permission.READ_CALL_LOG,
         )
     }
 }

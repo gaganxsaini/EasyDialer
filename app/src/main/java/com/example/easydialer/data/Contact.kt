@@ -20,6 +20,8 @@ data class Contact(
     @ColumnInfo(name = "name") val name: String? = null,
     /** Absolute path of a photo chosen in setup, kept in the app's own storage. Shown instead of the contact photo. */
     @ColumnInfo(name = "custom_photo") val customPhoto: String? = null,
+    /** Order on the dial screen, set by dragging in setup. */
+    @ColumnInfo(name = "position", defaultValue = "0") val position: Int = 0,
 )
 
 /** A saved contact with its current name and photo (custom photo first, else the contact's own). */
@@ -28,4 +30,6 @@ data class ContactCard(
     val name: String?,
     val number: String?,
     val photoUri: String?,
+    /** When this person's call was missed, if she hasn't called back or answered them since. */
+    val missedCallAt: Long? = null,
 )

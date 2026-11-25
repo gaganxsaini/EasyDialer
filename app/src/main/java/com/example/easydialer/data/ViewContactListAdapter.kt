@@ -5,13 +5,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.recyclerview.widget.AsyncListDiffer
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.easydialer.R
 
-/** The list on the setup screen. Names are already resolved, so binding does no contact lookups. */
+/**
+ * The list on the setup screen. Rows can be dragged into a new order; while a drag is going on,
+ * new lists from the database are held back so the row doesn't jump under her finger.
+ */
 class ViewContactListAdapter(
     private val onClick: (ContactCard) -> Unit,
 ) : RecyclerView.Adapter<ViewContactListAdapter.MyViewHolder>() {
@@ -20,24 +21,43 @@ class ViewContactListAdapter(
         val imgThumb: ImageView = itemView.findViewById(R.id.imgThumb)
     }
 
-    private val differCallback = object : DiffUtil.ItemCallback<ContactCard>() {
-        override fun areItemsTheSame(oldItem: ContactCard, newItem: ContactCard): Boolean =
-            oldItem.contact.id == newItem.contact.id
+    private val items = mutableListOf<ContactCard>()
+    private var pending: List<ContactCard>? = null
 
-        override fun areContentsTheSame(oldItem: ContactCard, newItem: ContactCard): Boolean =
-            oldItem == newItem
+    var dragging = false
+        set(value) {
+            field = value
+            if (!value) pending?.let { submit(it) }
+        }
+
+    /** Contacts in their current on-screen order. */
+    val currentList: List<ContactCard> get() = items
+
+    fun submit(cards: List<ContactCard>) {
+        if (dragging) {
+            pending = cards
+            return
+        }
+        pending = null
+        items.clear()
+        items.addAll(cards)
+        notifyDataSetChanged()
     }
 
-    val differ = AsyncListDiffer(this, differCallback)
+    /** Moves a row while it is being dragged. */
+    fun move(from: Int, to: Int) {
+        items.add(to, items.removeAt(from))
+        notifyItemMoved(from, to)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         return MyViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.contact_all_layout, parent, false))
     }
 
-    override fun getItemCount(): Int = differ.currentList.size
+    override fun getItemCount(): Int = items.size
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        val card = differ.currentList[position]
+        val card = items[position]
         holder.txtName.text = card.name ?: card.number ?: holder.itemView.context.getString(R.string.unknown_contact)
         holder.itemView.setOnClickListener { onClick(card) }
 

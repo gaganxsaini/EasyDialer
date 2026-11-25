@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- To mark people whose call was missed until she calls them back. -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
 
     <!-- Lets "Regular home" find the phone's own home screen on newer Android versions. -->
     <queries>

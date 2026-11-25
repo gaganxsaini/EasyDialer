@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Contact::class], version = 3)
+@Database(entities = [Contact::class], version = 4)
 abstract class ContactDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
 
@@ -31,6 +31,14 @@ abstract class ContactDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds the order column; existing contacts keep the order they were added in. */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE contact_table ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE contact_table SET position = id")
+            }
+        }
+
         fun getDatabase(context: Context): ContactDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -38,7 +46,7 @@ abstract class ContactDatabase : RoomDatabase() {
                     ContactDatabase::class.java,
                     "contact_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { INSTANCE = it }
             }

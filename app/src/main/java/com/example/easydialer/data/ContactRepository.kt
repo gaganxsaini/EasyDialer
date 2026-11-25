@@ -2,10 +2,12 @@ package com.example.easydialer.data
 
 import android.content.Context
 import android.net.Uri
+import android.provider.CallLog
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.Contacts
 import android.telephony.PhoneNumberUtils
 import androidx.lifecycle.LiveData
+import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -14,9 +16,10 @@ import java.io.IOException
 enum class AddResult { ADDED, DUPLICATE, FAILED }
 
 class ContactRepository(
-    private val contactDao: ContactDao,
+    private val database: ContactDatabase,
     context: Context,
 ) {
+    private val contactDao = database.contactDao()
     private val resolver = context.contentResolver
 
     /** Custom photos live here, in the app's private storage, so they survive gallery clean-ups. */
@@ -29,13 +32,19 @@ class ContactRepository(
         val picked = readPhoneRow(uri) ?: return@withContext AddResult.FAILED
         val alreadyAdded = contactDao.getAllOnce().any { sameNumber(it.number, picked.number) }
         if (alreadyAdded) return@withContext AddResult.DUPLICATE
-        contactDao.insert(picked)
+        // New people go to the end of the list.
+        contactDao.insert(picked.copy(position = contactDao.maxPosition() + 1))
         AddResult.ADDED
     }
 
     suspend fun removeContact(contact: Contact) = contactDao.delete(contact)
 
     suspend fun restoreContact(contact: Contact) = contactDao.insert(contact)
+
+    /** Saves the order from setup: [ids] from first to last. */
+    suspend fun saveOrder(ids: List<Int>) = database.withTransaction {
+        ids.forEachIndexed { index, id -> contactDao.updatePosition(id, index) }
+    }
 
     /** Copies the image at [source] into the app's storage and uses it as the contact's photo. */
     suspend fun setCustomPhoto(contactId: Int, source: Uri): Boolean = withContext(Dispatchers.IO) {
@@ -76,9 +85,45 @@ class ContactRepository(
         photoDir.listFiles()?.filter { it.absolutePath !in inUse }?.forEach { it.delete() }
     }
 
-    /** Reads each contact's current name and photo. Runs off the main thread. */
+    /** Reads each contact's current name, photo and missed-call state. Runs off the main thread. */
     suspend fun resolve(contacts: List<Contact>): List<ContactCard> = withContext(Dispatchers.IO) {
-        contacts.map { resolveOne(it) }
+        val recentCalls = readRecentCalls()
+        contacts.map { contact ->
+            val card = resolveOne(contact)
+            card.copy(missedCallAt = missedCallAt(card.number, recentCalls))
+        }
+    }
+
+    private class LoggedCall(val number: String, val type: Int, val date: Long)
+
+    /** Calls from the last [MISSED_CALL_WINDOW_MS], newest first. Empty without call-log permission. */
+    private fun readRecentCalls(): List<LoggedCall> = safeQuery {
+        val since = System.currentTimeMillis() - MISSED_CALL_WINDOW_MS
+        resolver.query(
+            CallLog.Calls.CONTENT_URI,
+            arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE),
+            "${CallLog.Calls.DATE} > ?",
+            arrayOf(since.toString()),
+            "${CallLog.Calls.DATE} DESC"
+        )?.use { c ->
+            val calls = mutableListOf<LoggedCall>()
+            while (c.moveToNext()) {
+                val number = c.getString(0) ?: continue
+                calls += LoggedCall(number, c.getInt(1), c.getLong(2))
+            }
+            calls
+        }
+    } ?: emptyList()
+
+    /**
+     * The time of the missed call if the latest call with [number] was missed. Any later call with
+     * them (she called back, or answered when they rang again), from any app, clears it; so does
+     * the call becoming older than the window.
+     */
+    private fun missedCallAt(number: String?, recentCalls: List<LoggedCall>): Long? {
+        if (number == null) return null
+        val latest = recentCalls.firstOrNull { sameNumber(it.number, number) } ?: return null
+        return if (latest.type == CallLog.Calls.MISSED_TYPE) latest.date else null
     }
 
     private suspend fun resolveOne(saved: Contact): ContactCard {
@@ -173,4 +218,9 @@ class ContactRepository(
         } catch (e: IllegalArgumentException) {
             null
         }
+
+    private companion object {
+        /** A missed call stops being marked after this long, even if she never called back. */
+        const val MISSED_CALL_WINDOW_MS = 2L * 24 * 60 * 60 * 1000
+    }
 }

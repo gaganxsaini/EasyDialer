@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 
 class ContactViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = ContactRepository(
-        ContactDatabase.getDatabase(application).contactDao(),
+        ContactDatabase.getDatabase(application),
         application
     )
 
@@ -51,6 +51,10 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
 
     fun deleteUnusedPhotos() = viewModelScope.launch {
         repository.deleteUnusedPhotos()
+    }
+
+    fun saveOrder(ids: List<Int>) = viewModelScope.launch {
+        repository.saveOrder(ids)
     }
 
     fun removeContact(contact: Contact) = viewModelScope.launch {

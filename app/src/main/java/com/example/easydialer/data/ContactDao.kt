@@ -8,10 +8,10 @@ import androidx.room.Query
 
 @Dao
 interface ContactDao {
-    @Query("SELECT * FROM contact_table ORDER BY id")
+    @Query("SELECT * FROM contact_table ORDER BY position, id")
     fun getAll(): LiveData<List<Contact>>
 
-    @Query("SELECT * FROM contact_table ORDER BY id")
+    @Query("SELECT * FROM contact_table ORDER BY position, id")
     suspend fun getAllOnce(): List<Contact>
 
     @Insert
@@ -24,6 +24,12 @@ interface ContactDao {
     // meanwhile (and the other way round).
     @Query("UPDATE contact_table SET lookup_key = :lookupKey, number = :number, name = :name WHERE id = :id")
     suspend fun updateDetails(id: Int, lookupKey: String?, number: String?, name: String?)
+
+    @Query("SELECT COALESCE(MAX(position), 0) FROM contact_table")
+    suspend fun maxPosition(): Int
+
+    @Query("UPDATE contact_table SET position = :position WHERE id = :id")
+    suspend fun updatePosition(id: Int, position: Int)
 
     @Query("UPDATE contact_table SET custom_photo = :path WHERE id = :id")
     suspend fun updateCustomPhoto(id: Int, path: String?)

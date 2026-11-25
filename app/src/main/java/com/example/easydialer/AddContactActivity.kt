@@ -72,22 +72,46 @@ class AddContactActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
 
         mContactViewModel.cards.observe(this) {
-            adapter.differ.submitList(it)
+            adapter.submit(it)
         }
 
-        // Swipe left or right to remove, with Undo. Reordering isn't supported yet, so no drag.
+        // Press and hold to drag a person to a new place; swipe left or right to remove, with Undo.
         val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
-            0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
+            private var orderChanged = false
+
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
-            ): Boolean = false
+            ): Boolean {
+                val from = viewHolder.adapterPosition
+                val to = target.adapterPosition
+                if (from == RecyclerView.NO_POSITION || to == RecyclerView.NO_POSITION) return false
+                adapter.move(from, to)
+                orderChanged = true
+                return true
+            }
+
+            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(viewHolder, actionState)
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) adapter.dragging = true
+            }
+
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                // Dropped: save the new order once, rather than on every step of the drag.
+                if (orderChanged) {
+                    orderChanged = false
+                    mContactViewModel.saveOrder(adapter.currentList.map { it.contact.id })
+                }
+                adapter.dragging = false
+            }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val pos = viewHolder.adapterPosition
-                val card = adapter.differ.currentList.getOrNull(pos)
+                val card = adapter.currentList.getOrNull(pos)
                 if (pos == RecyclerView.NO_POSITION || card == null) {
                     adapter.notifyDataSetChanged()
                     return

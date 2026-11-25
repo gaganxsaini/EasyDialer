@@ -29,7 +29,8 @@
     <string name="photo_saved">Photo updated</string>
     <string name="photo_failed">Couldn\'t use that photo</string>
     <string name="no_camera">No camera app found</string>
-    <string name="setup_hint">Tap a person to change their photo. Swipe to remove.</string>
+    <string name="setup_hint">Tap a person to change their photo. Press and hold to drag them to a new place. Swipe to remove.</string>
+    <string name="missed_call_from">Missed call from %1$s</string>
     <string name="menu_per_screen">Contacts per screen</string>
     <plurals name="per_screen_option">
         <item quantity="one">%d (one big photo)</item>
