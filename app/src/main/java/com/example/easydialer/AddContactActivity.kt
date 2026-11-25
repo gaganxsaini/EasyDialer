@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.ContactsContract
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -76,6 +78,27 @@ class AddContactActivity : AppCompatActivity() {
         }
 
         ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(recyclerView)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.setup_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        R.id.menu_regular_home -> {
+            HomeScreen.openRegular(this)
+            true
+        }
+        R.id.menu_change_home -> {
+            HomeScreen.openHomeSettings(this)
+            true
+        }
+        R.id.menu_change_pin -> {
+            SetupLock.changePin(this)
+            true
+        }
+        else -> super.onOptionsItemSelected(item)
     }
 
     private fun addPicked(uri: Uri) {

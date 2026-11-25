@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -22,6 +23,12 @@ import com.example.easydialer.data.ListAdapter
 
 class MainActivity : AppCompatActivity() {
     private lateinit var mContactViewModel: ContactViewModel
+    private lateinit var recyclerView: RecyclerView
+
+    // As the home screen, Back has nowhere to go: swallow it instead of closing the app.
+    private val blockBackAsHome = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = Unit
+    }
 
     private val requestPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -34,12 +41,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val adapter = ListAdapter(onCall = ::call, onLongPress = ::openSetup)
-        val recyclerView = findViewById<RecyclerView>(R.id.rv_list)
+        recyclerView = findViewById(R.id.rv_list)
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         PagerSnapHelper().attachToRecyclerView(recyclerView)
 
         // Only shown when no contacts are saved yet; otherwise setup opens with a long press on a photo.
+        // Either way the setup PIN is asked first.
         val btnSetup = findViewById<Button>(R.id.btnSetup)
         btnSetup.setOnClickListener { openSetup() }
 
@@ -49,11 +57,20 @@ class MainActivity : AppCompatActivity() {
             btnSetup.isVisible = cards.isEmpty()
         }
 
+        onBackPressedDispatcher.addCallback(this, blockBackAsHome)
+
         askForMissingPermissions()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Pressing Home while already here goes back to the first person.
+        recyclerView.scrollToPosition(0)
     }
 
     override fun onResume() {
         super.onResume()
+        blockBackAsHome.isEnabled = HomeScreen.isDefault(this)
         // Picks up photos or numbers changed in the Contacts app while we were away.
         mContactViewModel.refresh()
     }
@@ -87,7 +104,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openSetup() {
-        startActivity(Intent(this, AddContactActivity::class.java))
+        SetupLock.requestAccess(this) {
+            startActivity(Intent(this, AddContactActivity::class.java))
+        }
     }
 
     private companion object {

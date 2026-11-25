@@ -9,4 +9,18 @@
     <string name="contact_add_failed">Couldn\'t read that contact</string>
     <string name="contact_removed">Removed %1$s</string>
     <string name="undo">Undo</string>
+    <string name="menu_regular_home">Regular home</string>
+    <string name="menu_change_home">Change home app</string>
+    <string name="menu_change_pin">Change PIN</string>
+    <string name="no_other_home">No other home screen found</string>
+    <string name="pin_enter_title">Enter PIN</string>
+    <string name="pin_hint">PIN</string>
+    <string name="pin_wrong">Wrong PIN</string>
+    <string name="pin_create_title">Set a setup PIN</string>
+    <string name="pin_create_message">This PIN will be asked every time setup is opened.</string>
+    <string name="pin_new_hint">New 4-digit PIN</string>
+    <string name="pin_repeat_hint">Repeat PIN</string>
+    <string name="pin_too_short">Use 4 digits</string>
+    <string name="pin_mismatch">PINs don\'t match</string>
+    <string name="pin_changed">PIN changed</string>
 </resources>
