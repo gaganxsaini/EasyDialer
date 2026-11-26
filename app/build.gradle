@@ -8,7 +8,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.easydialer"
+        applicationId "in.eazify.easydialer"
         minSdk 25
         targetSdk 33
         // Each CI build gets a higher number, so a newer APK can be installed over an older one.
