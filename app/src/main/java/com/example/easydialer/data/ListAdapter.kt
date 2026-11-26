@@ -1,5 +1,9 @@
 package com.example.easydialer.data
 
+import android.animation.Animator
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
@@ -22,15 +26,30 @@ import com.example.easydialer.R
  * reuses pages: anything left over would show one person's face while calling someone else.
  */
 class ListAdapter(
-    private val onCall: (ContactCard) -> Unit,
+    /** Starts the call; returns false if it was ignored (e.g. a repeat tap) or couldn't start. */
+    private val onCall: (ContactCard) -> Boolean,
     private val onLongPress: () -> Unit,
 ) : RecyclerView.Adapter<ListAdapter.PageHolder>() {
     private var cards = emptyList<ContactCard>()
     private var pages = emptyList<List<ContactCard>>()
     private var perScreen = 1
 
-    /** One spot in the grid: the photo, plus a red frame and badge shown after a missed call. */
-    class Tile(val frame: FrameLayout, val photo: ImageView, val missedBorder: View, val missedBadge: ImageView)
+    /**
+     * One spot in the grid: the photo, a red frame and badge shown after a missed call, and a
+     * green cover with a pulsing phone shown from the tap until the call screen opens.
+     */
+    class Tile(
+        val frame: FrameLayout,
+        val photo: ImageView,
+        val missedBorder: View,
+        val missedBadge: ImageView,
+        val callingCover: View,
+        val callingIcon: ImageView,
+    ) {
+        var pulse: Animator? = null
+    }
+
+    private var callingTile: Tile? = null
 
     class PageHolder(itemView: View, val tiles: List<Tile>) : RecyclerView.ViewHolder(itemView)
 
@@ -105,7 +124,20 @@ class ListAdapter(
         frame.addView(badge, FrameLayout.LayoutParams(badgeSize, badgeSize, Gravity.TOP or Gravity.END).apply {
             setMargins(margin, margin, margin, margin)
         })
-        return Tile(frame, photo, border, badge)
+
+        val cover = View(context).apply {
+            setBackgroundColor(CALLING_GREEN)
+            visibility = View.GONE
+        }
+        val callingIconSize = badgeSize * 3 / 2
+        val icon = ImageView(context).apply {
+            setImageResource(R.drawable.ic_call)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            visibility = View.GONE
+        }
+        frame.addView(cover, match)
+        frame.addView(icon, FrameLayout.LayoutParams(callingIconSize, callingIconSize, Gravity.CENTER))
+        return Tile(frame, photo, border, badge, cover, icon)
     }
 
     override fun onBindViewHolder(holder: PageHolder, position: Int) {
@@ -126,7 +158,11 @@ class ListAdapter(
         } else {
             card.name
         }
-        tile.frame.setOnClickListener { onCall(card) }
+        hideCalling(tile)
+        tile.frame.setOnClickListener {
+            // Show the feedback only if the call really started, so a repeat tap changes nothing.
+            if (onCall(card)) showCalling(tile)
+        }
         tile.frame.setOnLongClickListener {
             onLongPress()
             true
@@ -151,8 +187,43 @@ class ListAdapter(
         }
     }
 
+    /** Turns the tapped photo green with a pulsing phone, so she sees at once that the call is starting. */
+    private fun showCalling(tile: Tile) {
+        callingTile?.let { hideCalling(it) }
+        callingTile = tile
+        tile.callingCover.visibility = View.VISIBLE
+        tile.callingIcon.visibility = View.VISIBLE
+        tile.pulse = ObjectAnimator.ofPropertyValuesHolder(
+            tile.callingIcon,
+            PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.25f),
+            PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.25f),
+        ).apply {
+            duration = 450
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            start()
+        }
+    }
+
+    /** Removes the calling feedback, e.g. once the call screen has opened. */
+    fun clearCalling() {
+        callingTile?.let { hideCalling(it) }
+        callingTile = null
+    }
+
+    private fun hideCalling(tile: Tile) {
+        tile.pulse?.cancel()
+        tile.pulse = null
+        tile.callingIcon.scaleX = 1f
+        tile.callingIcon.scaleY = 1f
+        tile.callingCover.visibility = View.GONE
+        tile.callingIcon.visibility = View.GONE
+        if (callingTile === tile) callingTile = null
+    }
+
     /** Empty spot on the last page: shows nothing and does nothing when tapped. */
     private fun clearTile(tile: Tile) {
+        hideCalling(tile)
         Glide.with(tile.photo).clear(tile.photo)
         tile.photo.setImageDrawable(null)
         tile.frame.setOnClickListener(null)
@@ -164,6 +235,9 @@ class ListAdapter(
     }
 
     private companion object {
+        /** Mostly opaque green over the photo while the call starts. */
+        const val CALLING_GREEN = 0xCC2E7D32.toInt()
+
         /** Columns and rows for each choice; the phone is tall, so extra rows before extra columns. */
         fun gridShape(perScreen: Int): Pair<Int, Int> = when (perScreen) {
             2 -> 1 to 2
